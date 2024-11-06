@@ -1,7 +1,7 @@
 ## WorldFootBallR Package
 
 ```{r}
-install.packages("worldfootballR")
+# install.packages("worldfootballR")
 library(worldfootballR)
 library(dplyr)
 library(ggplot2)
@@ -154,6 +154,30 @@ robert_combined_stats
 ```
 
 ```{r}
+
+library(dplyr)
+
+
+
+robert_combined_stats$Date <- as.Date(robert_combined_stats$Date, format = "%Y-%m-%d")
+
+# Re-check the Date column type
+str(robert_combined_stats$Date)  # This should now show Date
+
+# Arrange by date to compute cumulative metrics
+robert_combined_stats <- robert_combined_stats %>%
+  arrange(Date) %>%
+  
+  # Calculate cumulative minutes played and rest days
+  mutate(
+    Cumulative_Min = cumsum(Min),
+    
+    # Calculate days since the last game (rest days)
+    Rest_Days = as.numeric(difftime(Date, lag(Date, default = first(Date)), units = "days"))
+  )
+
+
+
 robert_combined_stats <- robert_combined_stats %>%
   mutate(Rest_Days_Group = cut(Rest_Days, breaks = c(0, 3, 7, 14, Inf), labels = c("0-3 days", "4-7 days", "8-14 days", "15+ days")))
 
@@ -272,15 +296,10 @@ epl_team_possession %>%
 ```
 
 ```{r}
-country <- "ENG"  # Country code for England
-league_name <- "Premier League"
-season_end_year <- "2021"
-stat_type <- "defense"
+library(ggrepel)
 
 # Retrieve defensive metrics for EPL teams
-epl_defense_stats <- fb_season_team_stats("ITA", "M", 2021, "1st", "defense")
-
-epl_defense_stats
+epl_defense_stats <- fb_season_team_stats("ENG", "M", 2021, "1st", "defense")
 
 ggplot(epl_defensive_data, aes(x = Tkl_Tackles, y = Tkl_percent_Challenges, size = Int, label = Squad)) +
   geom_point(color = "purple", fill = "lightblue", shape = 21, alpha = 0.6) +  # Adjust color and transparency
