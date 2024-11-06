@@ -2,6 +2,7 @@
 
 ```{r}
 # install.packages("worldfootballR")
+
 library(worldfootballR)
 library(dplyr)
 library(ggplot2)
@@ -11,28 +12,22 @@ library(gridExtra)
 ```{r}
 existing_logs <- read.csv("match_logs.csv")
 head(existing_logs)
-
 ```
 
 ```{r}
 colnames(existing_logs) <- trimws(colnames(existing_logs))
-
 forwards <- existing_logs |>
   filter(existing_logs$Pos == "FW")
-
 forwards$Date
 ```
 
 ```{r}
-
 # Convert dates with multiple formats
 forwards$Date <- as.Date(forwards$Date, format = "%m/%d/%y")  # First, try MM/DD/YY format
 forwards$Date[is.na(forwards$Date)] <- as.Date(forwards$Date[is.na(forwards$Date)], format = "%Y-%m-%d")  # Then, try YYYY-MM-DD format for any remaining NAs
-
 # Select key performance indicators for a forward
 forwards_performance <- forwards %>%
   select(Date, Gls_Performance, Ast_Performance, SoT_Performance, xG_Expected, PrgP_Passes)
-
 forwards_performance
 ```
 
@@ -41,14 +36,12 @@ forwards_performance
 library(ggplot2)
 library(gridExtra)
 library(gtable)
-
 # Function to extract legend from a plot
 get_legend <- function(my_plot) {
   tmp <- ggplotGrob(my_plot)
   leg <- gtable_filter(tmp, "guide-box")
   return(leg)
 }
-
 # Create a plot with a legend to extract
 plot_with_legend <- ggplot(forwards, aes(x = Date, y = Gls_Performance, color = Player)) +
   geom_line(size = 1) +
@@ -62,13 +55,10 @@ plot_with_legend <- ggplot(forwards, aes(x = Date, y = Gls_Performance, color = 
         plot.title = element_text(size = 10),
         axis.title = element_text(size = 8)) +
   scale_x_date(date_labels = "%Y-%m", date_breaks = "1 month")
-
 # Extract the legend
 common_legend <- get_legend(plot_with_legend)
-
 # Create individual plots without legends
 plot_goals <- plot_with_legend + theme(legend.position = "none")
-
 plot_assists <- ggplot(forwards, aes(x = Date, y = Ast_Performance, color = Player)) +
   geom_line(size = 1) +
   geom_point(size = 1.5) +
@@ -79,7 +69,6 @@ plot_assists <- ggplot(forwards, aes(x = Date, y = Ast_Performance, color = Play
         plot.title = element_text(size = 10),
         axis.title = element_text(size = 8)) +
   scale_x_date(date_labels = "%Y-%m", date_breaks = "1 month")
-
 plot_shots_on_target <- ggplot(forwards, aes(x = Date, y = SoT_Performance, color = Player)) +
   geom_line(size = 1) +
   geom_point(size = 1.5) +
@@ -90,7 +79,6 @@ plot_shots_on_target <- ggplot(forwards, aes(x = Date, y = SoT_Performance, colo
         plot.title = element_text(size = 10),
         axis.title = element_text(size = 8)) +
   scale_x_date(date_labels = "%Y-%m", date_breaks = "1 month")
-
 plot_expected_goals <- ggplot(forwards, aes(x = Date, y = xG_Expected, color = Player)) +
   geom_line(size = 1) +
   geom_point(size = 1.5) +
@@ -101,7 +89,6 @@ plot_expected_goals <- ggplot(forwards, aes(x = Date, y = xG_Expected, color = P
         plot.title = element_text(size = 10),
         axis.title = element_text(size = 8)) +
   scale_x_date(date_labels = "%Y-%m", date_breaks = "1 month")
-
 plot_progressive_passes <- ggplot(forwards, aes(x = Date, y = PrgP_Passes, color = Player)) +
   geom_line(size = 1) +
   geom_point(size = 1.5) +
@@ -112,7 +99,6 @@ plot_progressive_passes <- ggplot(forwards, aes(x = Date, y = PrgP_Passes, color
         plot.title = element_text(size = 10),
         axis.title = element_text(size = 8)) +
   scale_x_date(date_labels = "%Y-%m", date_breaks = "1 month")
-
 grid.arrange(
   arrangeGrob(plot_goals, plot_assists, plot_shots_on_target,
               plot_expected_goals, plot_progressive_passes, 
@@ -122,9 +108,6 @@ grid.arrange(
   nrow = 2,
   heights = c(10, 1) 
 )
-
-
-
 ```
 
 ## Lets analyse on Robert Lewandowski
@@ -132,34 +115,23 @@ grid.arrange(
 ```{r}
 robert_lewandowski <- forwards %>%
   filter(Player == "Robert Lewandowski")
-
 robert_url <- "https://fbref.com/en/players/8d78e732/Robert-Lewandowski"
-
 robert_stats_2021 <- fb_player_match_logs(player_url = robert_url, season_end_year = 2021, stat_type = "summary")
 robert_stats_2022 <- fb_player_match_logs(player_url = robert_url, season_end_year = 2022, stat_type = "summary")
 robert_stats_2023 <- fb_player_match_logs(player_url = robert_url, season_end_year = 2023, stat_type = "summary")
-
 robert_combined_stats <- bind_rows(
   robert_stats_2021,
   robert_stats_2022,
   robert_stats_2023
 )
-
-
 robert_combined_stats
 ```
 
 ```{r}
-
 library(dplyr)
-
-
-
 robert_combined_stats$Date <- as.Date(robert_combined_stats$Date, format = "%Y-%m-%d")
-
 # Re-check the Date column type
 str(robert_combined_stats$Date)  # This should now show Date
-
 # Arrange by date to compute cumulative metrics
 robert_combined_stats <- robert_combined_stats %>%
   arrange(Date) %>%
@@ -171,12 +143,8 @@ robert_combined_stats <- robert_combined_stats %>%
     # Calculate days since the last game (rest days)
     Rest_Days = as.numeric(difftime(Date, lag(Date, default = first(Date)), units = "days"))
   )
-
-
-
 robert_combined_stats <- robert_combined_stats %>%
   mutate(Rest_Days_Group = cut(Rest_Days, breaks = c(0, 3, 7, 14, Inf), labels = c("0-3 days", "4-7 days", "8-14 days", "15+ days")))
-
 ggplot(robert_combined_stats, aes(x = Rest_Days_Group, y = xG_Expected)) +
   geom_violin(fill = "skyblue", alpha = 0.7) +
   geom_jitter(width = 0.1, color = "darkblue", alpha = 0.6) + # Add points for individual data
@@ -189,20 +157,17 @@ ggplot(robert_combined_stats, aes(x = Rest_Days_Group, y = xG_Expected)) +
   theme(
     plot.title = element_text(hjust = 0.5, size = 14, face = "bold")
   )
-
 ```
 
 ```{r}
 # Load necessary libraries
 library(ggplot2)
 library(dplyr)
-
 # Assuming `robert_combined_stats` has Date, Min, and xG_Expected columns
 # Calculate cumulative minutes if not already done
 robert_combined_stats <- robert_combined_stats %>%
   arrange(Date) %>%
   mutate(Cumulative_Min = cumsum(Min))
-
 # Scatter plot of Cumulative Minutes vs Goal Expectancy with trend line
 ggplot(robert_combined_stats, aes(x = Cumulative_Min, y = xG_Expected)) +
   geom_point(size = 3, color = "black") + 
@@ -213,11 +178,9 @@ ggplot(robert_combined_stats, aes(x = Cumulative_Min, y = xG_Expected)) +
     y = "Goal Expectancy (xG)"
   ) +
   theme_minimal()
-
 ```
 
 ```{r}
-
 league_matches <- grep("Matchweek", robert_combined_stats$Comp, value = TRUE)
 # Create the new column `Competition_Type` based on `Comp`
 robert_combined_stats <- robert_combined_stats %>%
@@ -230,8 +193,6 @@ robert_combined_stats <- robert_combined_stats %>%
     TRUE ~ "Other"
   ))
 
-View(robert_combined_stats %>% select(Comp, Competition_Type))
-
 ggplot(robert_combined_stats, aes(x = xG_Expected, fill = Competition_Type)) +
   geom_density(alpha = 0.6) +
   labs(
@@ -243,7 +204,6 @@ ggplot(robert_combined_stats, aes(x = xG_Expected, fill = Competition_Type)) +
   theme(
     plot.title = element_text(hjust = 0.5, size = 14, face = "bold")
   )
-
 ```
 
 ```{r}
@@ -262,8 +222,6 @@ ggplot(robert_combined_stats, aes(x = Competition_Type, y = SoT_Performance, fil
   )
 ```
 
-## 
-
 ```{r}
 epl_team_possession <- fb_season_team_stats(
   country = "ENG", 
@@ -272,8 +230,6 @@ epl_team_possession <- fb_season_team_stats(
   tier = "1st", 
   stat_type = "possession"
 )
-
-epl_team_possession
 
 
 epl_team_possession %>%
@@ -287,18 +243,40 @@ epl_team_possession %>%
     x = "Team",
     y = "Possession (%)"
   ) +
+  theme_minimal()
+```
+
+```{r}
+
+library(ggrepel)
+# Retrieve defensive metrics for EPL teams
+epl_defense_stats <- fb_season_team_stats("ENG", "M", 2021, "1st", "defense")
+ggplot(epl_defense_stats, aes(x = Tkl_Tackles, y = Tkl_percent_Challenges, size = Int, label = Squad)) +
+  geom_point(color = "purple", fill = "lightblue", shape = 21, alpha = 0.6) +  # Adjust color and transparency
+  geom_smooth(method = "lm", se = FALSE, color = "darkblue", linetype = "dashed") +  # Add trend line
+  geom_text_repel(size = 3, max.overlaps = 15) + 
+  scale_size_continuous(name = "Interceptions", range = c(3, 8)) +  
+  labs(
+    title = "Tackle Success Rate vs Total Tackles (Bubble Size = Interceptions)",
+    x = "Total Tackles",
+    y = "Tackle Success Rate (%)"
+  ) +
+  theme_minimal(base_size = 8) +  
+  theme(
+    plot.title = element_text(hjust = 0.5), 
+    legend.position = "right"
+  )
+```
 
 **Player Injuries**
+
+```{r}
 # Filter data to include only injuries from 2022-01-01 onward
 injuries_df <- tm_league_injuries(country_name = "Spain")
-
 # View the data
 head(injuries_df)
-
 urls <- injuries_df$player_url
-
 new_vars <- list()
-
 for (i in seq_along(urls)) {
   # Store the result of the function call in the list with dynamic names
   new_vars[[paste0("df_", i)]] <- tm_player_injury_history(urls[i])
@@ -308,7 +286,6 @@ for (i in seq_along(urls)) {
 ```{r}
 # Initialize an empty DataFrame
 combined_df <- data.frame()
-
 # Loop through each item in new_vars and combine them using rbind
 for (i in 1:length(new_vars)) {
   combined_df <- rbind(combined_df, new_vars[[i]])
@@ -324,35 +301,21 @@ ggplot(combined_df, aes(x = injury)) +
 ```
 
 ```{r}
-ggplot(combined_df, aes(x = season_injured, y = duration)) +
-  geom_boxplot() +
-  labs(x = "Season", y = "Injury Duration", title = "Injury Duration by Season") +
+# Initialize an empty DataFrame
+combined_df <- data.frame()
 
-  theme_minimal()
+# Loop through each item in new_vars and combine them using rbind
+for (i in 1:length(new_vars)) {
+  combined_df <- rbind(combined_df, new_vars[[i]])
+}
+combined_df$duration <- as.numeric(gsub(" days", "", combined_df$duration))
 ```
 
 ```{r}
-
-library(ggrepel)
-
-# Retrieve defensive metrics for EPL teams
-epl_defense_stats <- fb_season_team_stats("ENG", "M", 2021, "1st", "defense")
-
-ggplot(epl_defensive_data, aes(x = Tkl_Tackles, y = Tkl_percent_Challenges, size = Int, label = Squad)) +
-  geom_point(color = "purple", fill = "lightblue", shape = 21, alpha = 0.6) +  # Adjust color and transparency
-  geom_smooth(method = "lm", se = FALSE, color = "darkblue", linetype = "dashed") +  # Add trend line
-  geom_text_repel(size = 3, max.overlaps = 15) + 
-  scale_size_continuous(name = "Interceptions", range = c(3, 8)) +  
-  labs(
-    title = "Tackle Success Rate vs Total Tackles (Bubble Size = Interceptions)",
-    x = "Total Tackles",
-    y = "Tackle Success Rate (%)"
-  ) +
-  theme_minimal(base_size = 8) +  
-  theme(
-    plot.title = element_text(hjust = 0.5), 
-    legend.position = "right"
-  )
+ggplot(combined_df, aes(x = season_injured, y = duration)) +
+  geom_boxplot() +
+  labs(x = "Season", y = "Injury Duration", title = "Injury Duration by Season") +
+  theme_minimal()
 
 ```
 
@@ -362,14 +325,11 @@ ggplot(epl_defensive_data, aes(x = Tkl_Tackles, y = Tkl_percent_Challenges, size
 club_injury_count <- combined_df %>%
   group_by(club) %>%
   summarise(injury_count = n())
-
 # View the result sorted by the number of injuries
 club_injury_count <- club_injury_count %>%
   arrange(desc(injury_count))
-
 # View the top results
 head(club_injury_count)
-
 # Create a bar plot to visualize injuries by club
 ggplot(club_injury_count, aes(x = reorder(club, -injury_count), y = injury_count)) +
   geom_bar(stat = "identity", fill = "skyblue") +
@@ -383,18 +343,25 @@ ggplot(combined_df, aes(x = reorder(club, -as.numeric(duration)), y = as.numeric
   geom_boxplot(fill = "lightgreen", color = "darkgreen") +
   labs(x = "Club", y = "Injury Duration (days)", title = "Distribution of Injury Duration by Club") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
 ```
 
 ```{r}
 # First, summarize injury counts by club if needed
 library(dplyr)
+# Summarize the injury count by club and season
+injuries_by_club_season <- combined_df %>%
+  group_by(club, season_injured) %>%
+  summarise(injury_count = n(), .groups = "drop")
+
+# Compute the total injuries per club for reordering
+club_total_injury <- injuries_by_club_season %>%
+  group_by(club) %>%
+  summarise(total_injury = sum(injury_count))
 
 injuries_by_club_season <- injuries_by_club_season %>%
   group_by(club) %>%
   mutate(total_injury_count = sum(injury_count)) %>%
   ungroup()
-
 # Plot with reordered clubs
 ggplot(injuries_by_club_season, aes(x = reorder(club, -total_injury_count), y = injury_count, fill = season_injured)) +
   geom_bar(stat = "identity") +
@@ -403,10 +370,18 @@ ggplot(injuries_by_club_season, aes(x = reorder(club, -total_injury_count), y = 
 ```
 
 ```{r}
-# Create the ggplot with thicker lines and ensure small counts are visible
+library(plotly)
+
+filtered_df <- combined_df |>
+  group_by(club) |>
+  filter(sum(!is.na(injured_since)) > 0) |>
+  ungroup() |>
+  filter(injured_since > 0)
+
+# Create the plot using ggplot
 p <- ggplot(filtered_df, aes(x = injured_since, color = club)) +
-  geom_line(stat = "count", size = 1) +  # Thicker line
-  geom_point(stat = "count", size = 1) +  # Add points for visibility of smaller counts
+  geom_line(stat = "count", size = 1.5) +  # Thicker line
+  geom_point(stat = "count", size = 3) +  # Add points for visibility of smaller counts
   labs(x = "Year", y = "Number of Injuries", title = "Trend of Injuries Over Time by Club") +
   theme_minimal() +
   theme(legend.position = "right", legend.text = element_text(size = 8))
