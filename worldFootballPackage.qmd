@@ -1,7 +1,11 @@
 ## WorldFootBallR Package
 
 ```{r}
+<<<<<<< Updated upstream
 # install.packages("worldfootballR")
+=======
+#install.packages("worldfootballR")
+>>>>>>> Stashed changes
 library(worldfootballR)
 library(dplyr)
 library(ggplot2)
@@ -267,6 +271,7 @@ ggplot(robert_combined_stats, aes(x = Competition_Type, y = SoT_Performance, fil
   )
 ```
 
+<<<<<<< Updated upstream
 ## 
 
 ```{r}
@@ -292,10 +297,52 @@ epl_team_possession %>%
     x = "Team",
     y = "Possession (%)"
   ) +
+=======
+**Player Injuries**
+```{r}
+# Filter data to include only injuries from 2022-01-01 onward
+injuries_df <- tm_league_injuries(country_name = "Spain")
+
+# View the data
+head(injuries_df)
+
+urls <- injuries_df$player_url
+
+new_vars <- list()
+
+for (i in seq_along(urls)) {
+  # Store the result of the function call in the list with dynamic names
+  new_vars[[paste0("df_", i)]] <- tm_player_injury_history(urls[i])
+}
+```
+
+```{r}
+# Initialize an empty DataFrame
+combined_df <- data.frame()
+
+# Loop through each item in new_vars and combine them using rbind
+for (i in 1:length(new_vars)) {
+  combined_df <- rbind(combined_df, new_vars[[i]])
+}
+```
+
+```{r}
+ggplot(combined_df, aes(x = injury)) +
+  geom_bar() +
+  labs(x = "Injury Type", y = "Count", title = "Injury Type Distribution") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+```{r}
+ggplot(combined_df, aes(x = season_injured, y = duration)) +
+  geom_boxplot() +
+  labs(x = "Season", y = "Injury Duration", title = "Injury Duration by Season") +
+>>>>>>> Stashed changes
   theme_minimal()
 ```
 
 ```{r}
+<<<<<<< Updated upstream
 library(ggrepel)
 
 # Retrieve defensive metrics for EPL teams
@@ -320,3 +367,61 @@ ggplot(epl_defensive_data, aes(x = Tkl_Tackles, y = Tkl_percent_Challenges, size
 ```
 
 \
+=======
+# Count injuries for each club
+club_injury_count <- combined_df %>%
+  group_by(club) %>%
+  summarise(injury_count = n())
+
+# View the result sorted by the number of injuries
+club_injury_count <- club_injury_count %>%
+  arrange(desc(injury_count))
+
+# View the top results
+head(club_injury_count)
+
+# Create a bar plot to visualize injuries by club
+ggplot(club_injury_count, aes(x = reorder(club, -injury_count), y = injury_count)) +
+  geom_bar(stat = "identity", fill = "skyblue") +
+  labs(x = "Club", y = "Number of Injuries", title = "Injury Count by Club") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+```{r}
+# Box plot of injury duration by club
+ggplot(combined_df, aes(x = reorder(club, -as.numeric(duration)), y = as.numeric(duration))) +
+  geom_boxplot(fill = "lightgreen", color = "darkgreen") +
+  labs(x = "Club", y = "Injury Duration (days)", title = "Distribution of Injury Duration by Club") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+```{r}
+# First, summarize injury counts by club if needed
+library(dplyr)
+
+injuries_by_club_season <- injuries_by_club_season %>%
+  group_by(club) %>%
+  mutate(total_injury_count = sum(injury_count)) %>%
+  ungroup()
+
+# Plot with reordered clubs
+ggplot(injuries_by_club_season, aes(x = reorder(club, -total_injury_count), y = injury_count, fill = season_injured)) +
+  geom_bar(stat = "identity") +
+  labs(x = "Club", y = "Number of Injuries", title = "Injuries by Club and Season") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+```
+```{r}
+# Create the ggplot with thicker lines and ensure small counts are visible
+p <- ggplot(filtered_df, aes(x = injured_since, color = club)) +
+  geom_line(stat = "count", size = 1) +  # Thicker line
+  geom_point(stat = "count", size = 1) +  # Add points for visibility of smaller counts
+  labs(x = "Year", y = "Number of Injuries", title = "Trend of Injuries Over Time by Club") +
+  theme_minimal() +
+  theme(legend.position = "right", legend.text = element_text(size = 8))
+
+# Convert ggplot to plotly and add single-click behavior
+plotly_plot <- ggplotly(p) %>%
+  layout(legend = list(itemclick = "toggleothers"))  # Enables single-click to show only one club
+
+plotly_plot
+```
+>>>>>>> Stashed changes
