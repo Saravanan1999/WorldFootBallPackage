@@ -346,8 +346,6 @@ ggplot(combined_df, aes(x = reorder(club, -as.numeric(duration)), y = as.numeric
 ```
 
 ```{r}
-# First, summarize injury counts by club if needed
-library(dplyr)
 # Summarize the injury count by club and season
 injuries_by_club_season <- combined_df %>%
   group_by(club, season_injured) %>%
@@ -358,15 +356,36 @@ club_total_injury <- injuries_by_club_season %>%
   group_by(club) %>%
   summarise(total_injury = sum(injury_count))
 
+# Add the total injury count for each club
 injuries_by_club_season <- injuries_by_club_season %>%
   group_by(club) %>%
   mutate(total_injury_count = sum(injury_count)) %>%
   ungroup()
-# Plot with reordered clubs
-ggplot(injuries_by_club_season, aes(x = reorder(club, -total_injury_count), y = injury_count, fill = season_injured)) +
-  geom_bar(stat = "identity") +
-  labs(x = "Club", y = "Number of Injuries", title = "Injuries by Club and Season") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
+
+# Create the interactive bar chart using Plotly with dynamic legend behavior
+fig <- plot_ly(injuries_by_club_season, 
+               x = ~season_injured,  # Move season_injured to the x-axis
+               y = ~injury_count, 
+               color = ~club,        # Color by club
+               type = 'bar', 
+               hoverinfo = 'x+y+text',
+               text = ~paste("Club: ", club, "<br>Injury Count: ", injury_count, "<br>Season: ", season_injured)) %>%
+  layout(title = "Injuries by Club and Season",
+         xaxis = list(title = "Season", tickangle = 0),
+         yaxis = list(title = "Number of Injuries"),
+         legend = list(title = list(text = 'Club')),
+         showlegend = TRUE)
+
+# Make the other clubs disappear when one is selected
+fig <- fig %>%
+  layout(
+    legend = list(
+      itemclick = "toggleothers"  # This will toggle other clubs when one is selected
+    )
+  )
+
+# Show the plot
+fig
 ```
 
 ```{r}
