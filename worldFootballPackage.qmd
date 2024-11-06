@@ -229,7 +229,7 @@ ggplot(robert_combined_stats, aes(x = xG_Expected, fill = Competition_Type)) +
 
 ```{r}
 ggplot(robert_combined_stats, aes(x = Competition_Type, y = SoT_Performance, fill = Competition_Type)) +
-  geom_boxplot(alpha = 0.7, outlier.color = "red", outlier.size = 2) +  # Box plot with outliers highlighted
+  geom_boxplot(alpha = 0.7, outlier.color = "red", outlier.size = 2) +  
   labs(
     title = "Shots on Target by Competition Type",
     x = "Competition Type",
@@ -242,3 +242,62 @@ ggplot(robert_combined_stats, aes(x = Competition_Type, y = SoT_Performance, fil
     legend.position = "none"
   )
 ```
+
+## 
+
+```{r}
+epl_team_possession <- fb_season_team_stats(
+  country = "ENG", 
+  gender = "M", 
+  season_end_year = 2021, 
+  tier = "1st", 
+  stat_type = "possession"
+)
+
+epl_team_possession
+
+
+epl_team_possession %>%
+  arrange(desc(Poss)) %>%
+  head(10) %>%
+  ggplot(aes(x = reorder(Squad, Poss), y = Poss)) +
+  geom_bar(stat = "identity", fill = "lightblue") +
+  coord_flip() +
+  labs(
+    title = "Top 10 Teams by Possession in EPL 2021",
+    x = "Team",
+    y = "Possession (%)"
+  ) +
+  theme_minimal()
+```
+
+```{r}
+country <- "ENG"  # Country code for England
+league_name <- "Premier League"
+season_end_year <- "2021"
+stat_type <- "defense"
+
+# Retrieve defensive metrics for EPL teams
+epl_defense_stats <- fb_season_team_stats("ITA", "M", 2021, "1st", "defense")
+
+epl_defense_stats
+
+ggplot(epl_defensive_data, aes(x = Tkl_Tackles, y = Tkl_percent_Challenges, size = Int, label = Squad)) +
+  geom_point(color = "purple", fill = "lightblue", shape = 21, alpha = 0.6) +  # Adjust color and transparency
+  geom_smooth(method = "lm", se = FALSE, color = "darkblue", linetype = "dashed") +  # Add trend line
+  geom_text_repel(size = 3, max.overlaps = 15) + 
+  scale_size_continuous(name = "Interceptions", range = c(3, 8)) +  
+  labs(
+    title = "Tackle Success Rate vs Total Tackles (Bubble Size = Interceptions)",
+    x = "Total Tackles",
+    y = "Tackle Success Rate (%)"
+  ) +
+  theme_minimal(base_size = 8) +  
+  theme(
+    plot.title = element_text(hjust = 0.5), 
+    legend.position = "right"
+  )
+
+```
+
+\
