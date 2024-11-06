@@ -1,2 +1,244 @@
+## WorldFootBallR Package
+
+```{r}
+install.packages("worldfootballR")
+library(worldfootballR)
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+```
+
+```{r}
+existing_logs <- read.csv("match_logs.csv")
+head(existing_logs)
+
+```
+
+```{r}
+colnames(existing_logs) <- trimws(colnames(existing_logs))
+
+forwards <- existing_logs |>
+  filter(existing_logs$Pos == "FW")
+
+forwards$Date
+```
+
+```{r}
+
+# Convert dates with multiple formats
+forwards$Date <- as.Date(forwards$Date, format = "%m/%d/%y")  # First, try MM/DD/YY format
+forwards$Date[is.na(forwards$Date)] <- as.Date(forwards$Date[is.na(forwards$Date)], format = "%Y-%m-%d")  # Then, try YYYY-MM-DD format for any remaining NAs
+
+# Select key performance indicators for a forward
+forwards_performance <- forwards %>%
+  select(Date, Gls_Performance, Ast_Performance, SoT_Performance, xG_Expected, PrgP_Passes)
+
+forwards_performance
+```
+
+```{r}
+
+```
+
+```{r, fig.width = 11, fig.height = 10}
+# Load necessary libraries
+library(ggplot2)
+library(gridExtra)
+library(gtable)
+
+# Function to extract legend from a plot
+get_legend <- function(my_plot) {
+  tmp <- ggplotGrob(my_plot)
+  leg <- gtable_filter(tmp, "guide-box")
+  return(leg)
+}
+
+# Create a plot with a legend to extract
+plot_with_legend <- ggplot(forwards, aes(x = Date, y = Gls_Performance, color = Player)) +
+  geom_line(size = 1) +
+  geom_point(size = 1.5) +
+  labs(title = "Goals for Forward Players", y = "Goals", x = "Date") +
+  theme_minimal() +
+  theme(legend.position = "bottom", # Place legend at the bottom in this plot
+        legend.title = element_text(size = 10),
+        legend.text = element_text(size = 8),
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 6),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 8)) +
+  scale_x_date(date_labels = "%Y-%m", date_breaks = "1 month")
+
+# Extract the legend
+common_legend <- get_legend(plot_with_legend)
+
+# Create individual plots without legends
+plot_goals <- plot_with_legend + theme(legend.position = "none")
+
+plot_assists <- ggplot(forwards, aes(x = Date, y = Ast_Performance, color = Player)) +
+  geom_line(size = 1) +
+  geom_point(size = 1.5) +
+  labs(title = "Assists for Forward Players", y = "Assists", x = "Date") +
+  theme_minimal() +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 6),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 8)) +
+  scale_x_date(date_labels = "%Y-%m", date_breaks = "1 month")
+
+plot_shots_on_target <- ggplot(forwards, aes(x = Date, y = SoT_Performance, color = Player)) +
+  geom_line(size = 1) +
+  geom_point(size = 1.5) +
+  labs(title = "Shots on Target for Forward Players", y = "Shots on Target", x = "Date") +
+  theme_minimal() +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 6),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 8)) +
+  scale_x_date(date_labels = "%Y-%m", date_breaks = "1 month")
+
+plot_expected_goals <- ggplot(forwards, aes(x = Date, y = xG_Expected, color = Player)) +
+  geom_line(size = 1) +
+  geom_point(size = 1.5) +
+  labs(title = "Expected Goals (xG) for Forward Players", y = "Expected Goals (xG)", x = "Date") +
+  theme_minimal() +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 6),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 8)) +
+  scale_x_date(date_labels = "%Y-%m", date_breaks = "1 month")
+
+plot_progressive_passes <- ggplot(forwards, aes(x = Date, y = PrgP_Passes, color = Player)) +
+  geom_line(size = 1) +
+  geom_point(size = 1.5) +
+  labs(title = "Progressive Passes for Forward Players", y = "Progressive Passes", x = "Date") +
+  theme_minimal() +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 6),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 8)) +
+  scale_x_date(date_labels = "%Y-%m", date_breaks = "1 month")
+
+grid.arrange(
+  arrangeGrob(plot_goals, plot_assists, plot_shots_on_target,
+              plot_expected_goals, plot_progressive_passes, 
+              ncol = 2,
+              top = "Performance Metrics Over Time for Forward Players (2022-2023)"),
+  common_legend,
+  nrow = 2,
+  heights = c(10, 1) 
+)
 
 
+
+```
+
+## Lets analyse on Robert Lewandowski
+
+```{r}
+robert_lewandowski <- forwards %>%
+  filter(Player == "Robert Lewandowski")
+
+robert_url <- "https://fbref.com/en/players/8d78e732/Robert-Lewandowski"
+
+robert_stats_2021 <- fb_player_match_logs(player_url = robert_url, season_end_year = 2021, stat_type = "summary")
+robert_stats_2022 <- fb_player_match_logs(player_url = robert_url, season_end_year = 2022, stat_type = "summary")
+robert_stats_2023 <- fb_player_match_logs(player_url = robert_url, season_end_year = 2023, stat_type = "summary")
+
+robert_combined_stats <- bind_rows(
+  robert_stats_2021,
+  robert_stats_2022,
+  robert_stats_2023
+)
+
+
+robert_combined_stats
+```
+
+```{r}
+robert_combined_stats <- robert_combined_stats %>%
+  mutate(Rest_Days_Group = cut(Rest_Days, breaks = c(0, 3, 7, 14, Inf), labels = c("0-3 days", "4-7 days", "8-14 days", "15+ days")))
+
+ggplot(robert_combined_stats, aes(x = Rest_Days_Group, y = xG_Expected)) +
+  geom_violin(fill = "skyblue", alpha = 0.7) +
+  geom_jitter(width = 0.1, color = "darkblue", alpha = 0.6) + # Add points for individual data
+  labs(
+    title = "Distribution of Goal Expectancy (xG) by Rest Days Group",
+    x = "Rest Days Group",
+    y = "Goal Expectancy (xG)"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold")
+  )
+
+```
+
+```{r}
+# Load necessary libraries
+library(ggplot2)
+library(dplyr)
+
+# Assuming `robert_combined_stats` has Date, Min, and xG_Expected columns
+# Calculate cumulative minutes if not already done
+robert_combined_stats <- robert_combined_stats %>%
+  arrange(Date) %>%
+  mutate(Cumulative_Min = cumsum(Min))
+
+# Scatter plot of Cumulative Minutes vs Goal Expectancy with trend line
+ggplot(robert_combined_stats, aes(x = Cumulative_Min, y = xG_Expected)) +
+  geom_point(size = 3, color = "black") + 
+  geom_smooth(method = "lm", se = FALSE, color = "blue") +
+  labs(
+    title = "Cumulative Minutes vs. Goal Expectancy (xG)",
+    x = "Cumulative Minutes",
+    y = "Goal Expectancy (xG)"
+  ) +
+  theme_minimal()
+
+```
+
+```{r}
+
+league_matches <- grep("Matchweek", robert_combined_stats$Comp, value = TRUE)
+
+# Create the new column `Competition_Type` based on `Comp`
+robert_combined_stats <- robert_combined_stats %>%
+  mutate(Competition_Type = case_when(
+    Comp %in% league_matches ~ "League Match",
+    Comp %in% c("UEFA Super Cup", "DFL-Supercup", "DFB-Pokal","WCQ", "Round of 16", "Quarter-finals", "UEFA Euro Qualifying",
+                "Round of 32", "Semi-finals", "Final", "Knockout round play-offs", 
+                "Second round", "First round", "UEFA Nations League", "Champions Lg") ~ "Cup Competition",
+    Comp %in% c("League A", "Group stage", "Finals") ~ "International Competition",
+    TRUE ~ "Other"
+  ))
+
+View(robert_combined_stats %>% select(Comp, Competition_Type))
+
+ggplot(robert_combined_stats, aes(x = xG_Expected, fill = Competition_Type)) +
+  geom_density(alpha = 0.6) +
+  labs(
+    title = "Density Plot of Goal Expectancy (xG) by Competition Type",
+    x = "Goal Expectancy (xG)",
+    y = "Density"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold")
+  )
+
+```
+
+```{r}
+ggplot(robert_combined_stats, aes(x = Competition_Type, y = SoT_Performance, fill = Competition_Type)) +
+  geom_boxplot(alpha = 0.7, outlier.color = "red", outlier.size = 2) +  # Box plot with outliers highlighted
+  labs(
+    title = "Shots on Target by Competition Type",
+    x = "Competition Type",
+    y = "Shots on Target"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  )
+```
