@@ -1,11 +1,7 @@
 ## WorldFootBallR Package
 
 ```{r}
-<<<<<<< Updated upstream
 # install.packages("worldfootballR")
-=======
-#install.packages("worldfootballR")
->>>>>>> Stashed changes
 library(worldfootballR)
 library(dplyr)
 library(ggplot2)
@@ -38,10 +34,6 @@ forwards_performance <- forwards %>%
   select(Date, Gls_Performance, Ast_Performance, SoT_Performance, xG_Expected, PrgP_Passes)
 
 forwards_performance
-```
-
-```{r}
-
 ```
 
 ```{r, fig.width = 11, fig.height = 10}
@@ -227,7 +219,6 @@ ggplot(robert_combined_stats, aes(x = Cumulative_Min, y = xG_Expected)) +
 ```{r}
 
 league_matches <- grep("Matchweek", robert_combined_stats$Comp, value = TRUE)
-
 # Create the new column `Competition_Type` based on `Comp`
 robert_combined_stats <- robert_combined_stats %>%
   mutate(Competition_Type = case_when(
@@ -271,7 +262,6 @@ ggplot(robert_combined_stats, aes(x = Competition_Type, y = SoT_Performance, fil
   )
 ```
 
-<<<<<<< Updated upstream
 ## 
 
 ```{r}
@@ -297,9 +287,8 @@ epl_team_possession %>%
     x = "Team",
     y = "Possession (%)"
   ) +
-=======
+
 **Player Injuries**
-```{r}
 # Filter data to include only injuries from 2022-01-01 onward
 injuries_df <- tm_league_injuries(country_name = "Spain")
 
@@ -333,16 +322,17 @@ ggplot(combined_df, aes(x = injury)) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1))
 ```
+
 ```{r}
 ggplot(combined_df, aes(x = season_injured, y = duration)) +
   geom_boxplot() +
   labs(x = "Season", y = "Injury Duration", title = "Injury Duration by Season") +
->>>>>>> Stashed changes
+
   theme_minimal()
 ```
 
 ```{r}
-<<<<<<< Updated upstream
+
 library(ggrepel)
 
 # Retrieve defensive metrics for EPL teams
@@ -366,8 +356,8 @@ ggplot(epl_defensive_data, aes(x = Tkl_Tackles, y = Tkl_percent_Challenges, size
 
 ```
 
-\
-=======
+```{r}
+
 # Count injuries for each club
 club_injury_count <- combined_df %>%
   group_by(club) %>%
@@ -386,6 +376,7 @@ ggplot(club_injury_count, aes(x = reorder(club, -injury_count), y = injury_count
   labs(x = "Club", y = "Number of Injuries", title = "Injury Count by Club") +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
+
 ```{r}
 # Box plot of injury duration by club
 ggplot(combined_df, aes(x = reorder(club, -as.numeric(duration)), y = as.numeric(duration))) +
@@ -394,6 +385,7 @@ ggplot(combined_df, aes(x = reorder(club, -as.numeric(duration)), y = as.numeric
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 ```
+
 ```{r}
 # First, summarize injury counts by club if needed
 library(dplyr)
@@ -409,6 +401,7 @@ ggplot(injuries_by_club_season, aes(x = reorder(club, -total_injury_count), y = 
   labs(x = "Club", y = "Number of Injuries", title = "Injuries by Club and Season") +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) 
 ```
+
 ```{r}
 # Create the ggplot with thicker lines and ensure small counts are visible
 p <- ggplot(filtered_df, aes(x = injured_since, color = club)) +
@@ -424,4 +417,3 @@ plotly_plot <- ggplotly(p) %>%
 
 plotly_plot
 ```
->>>>>>> Stashed changes
