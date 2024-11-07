@@ -1,0 +1,420 @@
+## WorldFootBallR Package
+
+```{r}
+# install.packages("worldfootballR")
+library(worldfootballR)
+library(dplyr)
+library(ggplot2)
+library(gridExtra)
+library(plotly)
+library(dplyr)
+library(ggrepel)
+library(gtable)
+library(stringr)
+```
+
+## User Case 1: Analyzing Forward Players' Performance Over Time of FC Barcelona (from fbref.com)
+
+```{r}
+# fc_barcelona_url <- "https://fbref.com/en/squads/206d90db/2022-2023/Barcelona-Stats"
+# match_logs <- list()
+# player_urls <- fb_player_urls(team_url = fc_barcelona_url)
+# for (player_url in player_urls) {
+#   logs <- fb_player_match_logs(player_url = player_url, season_end_year = 2023, stat_type = "summary")
+#   match_logs <- append(match_logs, list(logs))
+#   Sys.sleep(60)
+# }
+# all_match_logs <- bind_rows(match_logs)
+# write.csv(all_match_logs, "match_logs.csv", row.names = FALSE)
+```
+
+```{r}
+existing_logs <- read.csv("match_logs.csv")
+head(existing_logs)
+```
+
+### Filtering only players who play in forward positions
+
+```{r}
+colnames(existing_logs) <- trimws(colnames(existing_logs))
+attackers <- existing_logs |>
+  filter(str_detect(Pos, "FW|AM|LW|RW|RM|LM|CM"))
+```
+
+### Selecting Key Performance Attributes for attackers to Analyze
+
+```{r}
+attackers$Date <- as.Date(attackers$Date, format = "%m/%d/%y")  
+attackers$Date[is.na(attackers$Date)] <- as.Date(attackers$Date[is.na(attackers$Date)], 
+                                               format = "%Y-%m-%d")  
+
+attackers_performance <- attackers |>
+  select(Date, Gls_Performance, Ast_Performance, SoT_Performance, xG_Expected)
+head(attackers_performance)
+```
+
+### Analyzing the different performance metrics for various players at attacking positions' in FC Barcelona
+
+```{r}
+
+# Plot with legend for goals performance
+get_legend <- function(my_plot) {
+  tmp <- ggplotGrob(my_plot)
+  leg <- gtable_filter(tmp, "guide-box")
+  return(leg)
+}
+
+# Plotting Goals 
+plot_with_legend <- ggplot(attackers, aes(x = Date, 
+                                         y = Gls_Performance, color = Player)) +
+  geom_line(size = 1) +
+  geom_point(size = 1.5) +
+  labs(title = "Goals for Forward Players", y = "Goals", x = "Date") +
+  theme_minimal() +
+  theme(
+    legend.position = "bottom", 
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 8),
+    axis.text.x = element_text(angle = 45, hjust = 1, size = 6),
+    plot.title = element_text(size = 10),
+    axis.title = element_text(size = 8)
+  ) +
+  scale_x_date(date_labels = "%Y-%m", date_breaks = "1 month")
+
+common_legend <- get_legend(plot_with_legend)
+plot_goals <- plot_with_legend + theme(legend.position = "none")
+
+```
+
+```{r}
+# Plot for assists
+plot_assists <- ggplot(attackers, aes(x = Date, y = Ast_Performance, color = Player)) +
+  geom_line(size = 1) +
+  geom_point(size = 1.5) +
+  labs(title = "Assists for Forward Players", y = "Assists", x = "Date") +
+  theme_minimal() +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 6),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 8)) +
+  scale_x_date(date_labels = "%Y-%m", date_breaks = "1 month")
+```
+
+```{r}
+# Plot for expected goals (xG)
+plot_expected_goals <- ggplot(attackers, aes(x = Date, y = xG_Expected, color = Player)) +
+  geom_line(size = 1) +
+  geom_point(size = 1.5) +
+  labs(title = "Expected Goals (xG) for Forward Players", y = "Expected Goals (xG)", x = "Date") +
+  theme_minimal() +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 6),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 8)) +
+  scale_x_date(date_labels = "%Y-%m", date_breaks = "1 month")
+```
+
+```{r}
+# Plot for shots on target
+plot_shots_on_target <- ggplot(attackers, aes(x = Date, y = SoT_Performance, color = Player)) +
+  geom_line(size = 1) +
+  geom_point(size = 1.5) +
+  labs(title = "Shots on Target for Forward Players", y = "Shots on Target", x = "Date") +
+  theme_minimal() +
+  theme(legend.position = "none",
+        axis.text.x = element_text(angle = 45, hjust = 1, size = 6),
+        plot.title = element_text(size = 10),
+        axis.title = element_text(size = 8)) +
+  scale_x_date(date_labels = "%Y-%m", date_breaks = "1 month")
+```
+
+```{r, fig.width = 11, fig.height = 14}
+# Arrange plots with a common legend at the bottom
+grid.arrange(
+  arrangeGrob(plot_goals, plot_assists, plot_shots_on_target,
+              plot_expected_goals, 
+              ncol = 2,
+              top = "Performance Metrics Over Time for Forward Players (2022-2023)"),
+  common_legend,
+  nrow = 2,
+  heights = c(10, 1) 
+)
+```
+
+## Analyzing Performance of a Single Player (Robert Lewandowski) for 2021-2023
+
+```{r}
+# Getting Robert Lewandowski's match logs from 2021-2023
+robert_lewandowski <- attackers |>
+  filter(Player == "Robert Lewandowski")
+robert_url <- "https://fbref.com/en/players/8d78e732/Robert-Lewandowski"
+robert_stats_2021 <- fb_player_match_logs(player_url = robert_url, season_end_year = 2021, stat_type = "summary")
+robert_stats_2022 <- fb_player_match_logs(player_url = robert_url, season_end_year = 2022, stat_type = "summary")
+robert_stats_2023 <- fb_player_match_logs(player_url = robert_url, season_end_year = 2023, stat_type = "summary")
+robert_combined_stats <- bind_rows(
+  robert_stats_2021,
+  robert_stats_2022,
+  robert_stats_2023
+)
+head(robert_combined_stats)
+```
+
+### Analysis on Goal Expectancy (xG) vs Rest days before the game and Cumulative Minutes Played
+
+```{r}
+
+robert_combined_stats$Date <- as.Date(robert_combined_stats$Date, format = "%Y-%m-%d")
+
+str(robert_combined_stats$Date) 
+
+robert_combined_stats <- robert_combined_stats |>
+  arrange(Date) |>
+  mutate(
+    Cumulative_Min = cumsum(Min),
+    Rest_Days = as.numeric(difftime(Date, lag(Date, default = first(Date)), units = "days"))
+  )
+robert_combined_stats <- robert_combined_stats |>
+  mutate(Rest_Days_Group = cut(Rest_Days, breaks = c(0, 3, 7, 14, Inf), labels = c("0-3 days", "4-7 days", "8-14 days", "15+ days")))
+ggplot(robert_combined_stats, aes(x = Rest_Days_Group, y = xG_Expected)) +
+  geom_violin(fill = "skyblue", alpha = 0.7) +
+  geom_jitter(width = 0.1, color = "darkblue", alpha = 0.6) + 
+  labs(
+    title = "Distribution of Goal Expectancy (xG) by Rest Days Group",
+    x = "Rest Days Group",
+    y = "Goal Expectancy (xG)"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold")
+  )
+```
+
+```{r}
+robert_combined_stats <- robert_combined_stats |>
+  arrange(Date) |>
+  mutate(Cumulative_Min = cumsum(Min))
+
+ggplot(robert_combined_stats, aes(x = Cumulative_Min, y = xG_Expected)) +
+  geom_point(size = 3, color = "black") + 
+  geom_smooth(method = "lm", se = FALSE, color = "blue", 
+              linetype = "solid", size = 1, 
+              aes(label = "Trend Line: Goal Expectancy")) +
+  labs(
+    title = "Cumulative Minutes vs. Goal Expectancy (xG)",
+    x = "Cumulative Minutes",
+    y = "Goal Expectancy (xG)"
+  ) +
+  theme_minimal() 
+```
+
+### Goal Expectancy (xG) on Cup Competition vs League Games:
+
+```{r}
+league_matches <- grep("Matchweek", robert_combined_stats$Comp, value = TRUE)
+
+robert_combined_stats <- robert_combined_stats |>
+  mutate(Competition_Type = case_when(
+    Comp %in% league_matches ~ "League Match",
+    Comp %in% c("UEFA Super Cup", "DFL-Supercup", "DFB-Pokal","WCQ", "Round of 16", "Quarter-finals", "UEFA Euro Qualifying",
+                "Round of 32", "Semi-finals", "Final", "Knockout round play-offs", 
+                "Second round", "First round", "UEFA Nations League", "Champions Lg") ~ "Cup Competition",
+    Comp %in% c("League A", "Group stage", "Finals") ~ "International Competition",
+    TRUE ~ "Other"
+  ))
+
+ggplot(robert_combined_stats, aes(x = xG_Expected, fill = Competition_Type)) +
+  geom_density(alpha = 0.6) +
+  labs(
+    title = "Density Plot of Goal Expectancy (xG) by Competition Type",
+    x = "Goal Expectancy (xG)",
+    y = "Density"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold")
+  )
+```
+
+### Shots on Target on Cup Competition vs League Games:
+
+```{r}
+ggplot(robert_combined_stats, aes(x = Competition_Type, y = SoT_Performance, fill = Competition_Type)) +
+  geom_boxplot(alpha = 0.7, outlier.color = "red", outlier.size = 2) +  
+  labs(
+    title = "Shots on Target by Competition Type",
+    x = "Competition Type",
+    y = "Shots on Target"
+  ) +
+  theme_minimal() +
+  theme(
+    plot.title = element_text(hjust = 0.5, size = 14, face = "bold"),
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    legend.position = "none"
+  )
+```
+
+## Use Case 2: Injury Analysis of Spanish League Players from TransferMarkt
+
+```{r}
+injuries_df <- tm_league_injuries(country_name = "Spain")
+head(injuries_df)
+urls <- injuries_df$player_url
+new_vars <- list()
+for (i in seq_along(urls)) {
+  new_vars[[paste0("df_", i)]] <- tm_player_injury_history(urls[i])
+}
+```
+
+```{r}
+combined_df <- data.frame()
+for (i in 1:length(new_vars)) {
+  combined_df <- rbind(combined_df, new_vars[[i]])
+}
+```
+
+### Injury Types and Frequency
+
+```{r}
+ggplot(combined_df, aes(x = injury)) +
+  geom_bar() +
+  labs(x = "Injury Type", y = "Count", title = "Injury Type Distribution") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+```{r}
+combined_df <- data.frame()
+
+for (i in 1:length(new_vars)) {
+  combined_df <- rbind(combined_df, new_vars[[i]])
+}
+combined_df$duration <- as.numeric(gsub(" days", "", combined_df$duration))
+```
+
+### Comparing Injury Duration Across Seasons
+
+```{r}
+ggplot(combined_df, aes(x = season_injured, y = duration)) +
+  geom_boxplot() +
+  labs(x = "Season", y = "Injury Duration", title = "Injury Duration by Season") +
+  theme_minimal()
+```
+
+### Club-wise Injury Trends Across Seasons
+
+```{r}
+injuries_by_club_season <- combined_df |>
+  group_by(club, season_injured) |>
+  summarise(injury_count = n(), .groups = "drop")
+
+club_total_injury <- injuries_by_club_season |>
+  group_by(club) |>
+  summarise(total_injury = sum(injury_count))
+
+injuries_by_club_season <- injuries_by_club_season |>
+  group_by(club) |>
+  mutate(total_injury_count = sum(injury_count)) |>
+  ungroup()
+
+fig <- plot_ly(injuries_by_club_season, 
+               x = ~season_injured,  
+               y = ~injury_count, 
+               color = ~club,        
+               type = 'bar', 
+               hoverinfo = 'x+y+text',
+               text = ~paste("Club: ", club, "<br>Injury Count: ", injury_count, "<br>Season: ", season_injured)) |>
+  layout(title = "Injuries by Club and Season",
+         xaxis = list(title = "Season", tickangle = 0),
+         yaxis = list(title = "Number of Injuries"),
+         legend = list(title = list(text = 'Club')),
+         showlegend = TRUE)
+
+fig <- fig |>
+  layout(
+    legend = list(
+      itemclick = "toggleothers"  
+    )
+  )
+
+fig
+```
+
+### Injury Analysis by Clubs over Time
+
+```{r}
+filtered_df <- combined_df |>
+  group_by(club) |>
+  filter(sum(!is.na(injured_since)) > 0) |>
+  ungroup() |>
+  filter(injured_since > 0)
+
+p <- ggplot(filtered_df, aes(x = injured_since, color = club)) +
+  geom_line(stat = "count", size = 1.5) +  
+  geom_point(stat = "count", size = 3) +  
+  labs(x = "Year", y = "Number of Injuries", title = "Trend of Injuries Over Time by Club") +
+  theme_minimal() +
+  theme(legend.position = "right", legend.text = element_text(size = 8))
+
+plotly_plot <- ggplotly(p) |>
+  layout(legend = list(itemclick = "toggleothers"))  
+
+plotly_plot
+```
+
+## Use Case 3: Analysis on Teams in EPL (from fbref.com)
+
+```{r}
+epl_team_possession <- fb_season_team_stats(
+  country = "ENG", 
+  gender = "M", 
+  season_end_year = 2023, 
+  tier = "1st", 
+  stat_type = "possession"
+)
+
+unique(epl_team_possession$Squad)
+```
+
+```{r}
+epl_team_possession$Squad <- as.character(epl_team_possession$Squad)
+
+# Filter to keep rows where Squad does not contain "vs"
+epl_team_possession <- epl_team_possession[!grepl("\\bvs\\b", epl_team_possession$Squad, ignore.case = TRUE), ]
+
+epl_team_possession |>
+  arrange(desc(Poss)) |>
+  head(10) |>
+  ggplot(aes(x = reorder(Squad, Poss), y = Poss)) +
+  geom_bar(stat = "identity", fill = "lightblue") +
+  coord_flip() +
+  labs(
+    title = "Top 10 Teams by Possession in EPL 2021",
+    x = "Team",
+    y = "Possession (%)"
+  ) +
+  theme_minimal()
+```
+
+## Use Case 4: Team Defense analysis - Tackle success rate vs Total Tackles (from fbref.com)
+
+```{r}
+epl_defense_stats <- fb_season_team_stats("ENG", "M", 2021, "1st", "defense")
+epl_defense_stats <- epl_defense_stats[!grepl("\\bvs\\b", epl_defense_stats$Squad, ignore.case = TRUE), ]
+
+
+ggplot(epl_defense_stats, aes(x = Tkl_Tackles, y = Tkl_percent_Challenges, size = Int, label = Squad)) +
+  geom_point(color = "purple", fill = "lightblue", shape = 21, alpha = 0.6) +  
+  geom_smooth(method = "lm", se = FALSE, color = "darkblue", linetype = "dashed") +  
+  geom_text_repel(size = 3, max.overlaps = 15) + 
+  scale_size_continuous(name = "Interceptions", range = c(3, 8)) +  
+  labs(
+    title = "Tackle Success Rate vs Total Tackles (Bubble Size = Interceptions)",
+    x = "Total Tackles",
+    y = "Tackle Success Rate (%)"
+  ) +
+  theme_minimal(base_size = 8) +  
+  theme(
+    plot.title = element_text(hjust = 0.5), 
+    legend.position = "right"
+  )
+```
